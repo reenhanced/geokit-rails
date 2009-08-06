@@ -228,6 +228,8 @@ module Geokit
         # conditionally adding to the select clause for finders.
         def prepare_for_find_or_count(action, args)
           options = args.extract_options!
+          return if options.nil?||options.empty?
+
           #options = defined?(args.extract_options!) ? args.extract_options! : extract_options_from_args!(args)
           # Obtain items affecting distance condition.
           origin = extract_origin_from_options(options)
