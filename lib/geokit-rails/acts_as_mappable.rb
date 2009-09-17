@@ -218,6 +218,8 @@ module Geokit
           sql = sphere_distance_sql(origin, units)
         when :flat
           sql = flat_distance_sql(origin, units)
+        when :simple
+          sql = simple_flat_distance_sql(origin, units)
         end
         sql
       end
@@ -407,47 +409,49 @@ module Geokit
 
         # Returns the distance SQL using the spherical world formula (Haversine).  The SQL is tuned
         # to the database in use.
-        def sphere_distance_sql(origin, units)
-          lat = deg2rad(origin.lat)
-          lng = deg2rad(origin.lng)
-          multiplier = units_sphere_multiplier(units)
-          case connection.adapter_name.downcase
-          when "mysql"
+        def sphere_distance_sql(origin, units=default_units)
+            lat = deg2rad(origin.lat)
+            lng = deg2rad(origin.lng)
+            clat=Math.cos(lat)
+            clng=Math.cos(lng)
+            slat=Math.sin(lat)
+            slng=Math.sin(lng)
+            multiplier = units_sphere_multiplier(units)
+            #would be nice to store these as columns in the database
+            rlat="RADIANS(#{qualified_lat_column_name})"
+            rlng="RADIANS(#{qualified_lng_column_name})"
             sql=<<-SQL_END 
-                  (ACOS(least(1,COS(#{lat})*COS(#{lng})*COS(RADIANS(#{qualified_lat_column_name}))*COS(RADIANS(#{qualified_lng_column_name}))+
-                  COS(#{lat})*SIN(#{lng})*COS(RADIANS(#{qualified_lat_column_name}))*SIN(RADIANS(#{qualified_lng_column_name}))+
-                  SIN(#{lat})*SIN(RADIANS(#{qualified_lat_column_name}))))*#{multiplier})
+                  (ACOS(least(1,#{clat}*#{clng}*COS(#{rlat})*COS(#{rlng})+
+                  #{clat}*#{slng}*COS(#{rlat})*SIN(#{rlng})+
+                  #{slat}*SIN(#{rlat})))*#{multiplier})
                   SQL_END
-          when "postgresql"
-            sql=<<-SQL_END 
-                  (ACOS(least(1,COS(#{lat})*COS(#{lng})*COS(RADIANS(#{qualified_lat_column_name}))*COS(RADIANS(#{qualified_lng_column_name}))+
-                  COS(#{lat})*SIN(#{lng})*COS(RADIANS(#{qualified_lat_column_name}))*SIN(RADIANS(#{qualified_lng_column_name}))+
-                  SIN(#{lat})*SIN(RADIANS(#{qualified_lat_column_name}))))*#{multiplier})
-                  SQL_END
-          else
-            sql = "unhandled #{connection.adapter_name.downcase} adapter"
-          end        
         end
         
         # Returns the distance SQL using the flat-world formula (Phythagorean Theory).  The SQL is tuned
         # to the database in use.
-        def flat_distance_sql(origin, units)
-          lat_degree_units = units_per_latitude_degree(units)
-          lng_degree_units = units_per_longitude_degree(origin.lat, units)
-          case connection.adapter_name.downcase
-          when "mysql"
-            sql=<<-SQL_END
-                  SQRT(POW(#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name}),2)+
-                  POW(#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name}),2))
-                  SQL_END
-          when "postgresql"
-            sql=<<-SQL_END
-                  SQRT(POW(#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name}),2)+
-                  POW(#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name}),2))
-                  SQL_END
-          else
-            sql = "unhandled #{connection.adapter_name.downcase} adapter"
-          end
+        def flat_distance_sql(origin, units=default_units)
+          lat_degree_units = units_per_latitude_degree(units) #69.1
+          lng_degree_units = units_per_longitude_degree(origin.lat, units) #69.1 and cos... aka 53.0
+          lat_dist="#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name})"
+          lng_dist="#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name})"
+
+          sql="SQRT(POW(#{lat_dist},2)+POW(#{lng_dist},2))"
+        end
+
+        # Returns the distance SQL using the flat-world formula (Phythagorean Theory).
+        # Further simplified to not use SQRT
+        def simple_flat_distance_sql(origin, units=default_units)
+          lat_degree_units = units_per_latitude_degree(units) #69.1
+          lng_degree_units = units_per_longitude_degree(origin.lat, units) #69.1 and cos... aka 53.0
+          lat_dist="#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name})"
+          lng_dist="#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name})"
+
+          factor=0.415#use 1-DELTA_FACTOR
+          delta_factor=0.53 #use 0.6 for simplicity
+          lat_dist="ABS(#{lat_dist})"
+          lng_dist="ABS(#{lng_dist})"
+          #sqlite uses max for most and min for least
+          sql="((#{lat_dist}+#{lng_dist})*#{factor}+MAX(#{lat_dist},#{lng_dist})*#{delta_factor})"
         end
     end
   end
