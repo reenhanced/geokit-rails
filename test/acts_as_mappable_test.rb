@@ -137,6 +137,12 @@ class ActsAsMappableTest < ActiveSupport::TestCase #:nodoc: all
     assert_in_delta 3.97, @loc_a.distance_to(locations.last, :units => :miles, :formula => :sphere), 0.01
   end
   
+  def test_regular_find_still_works
+    assert_nothing_thrown do
+      Location.first.reload
+    end
+  end
+
   def test_find_with_distance_condition
     locations = Location.find(:all, :origin => @loc_a, :conditions => "distance < 3.97")
     assert_equal 5, locations.size
