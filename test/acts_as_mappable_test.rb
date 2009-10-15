@@ -100,6 +100,13 @@ class ActsAsMappableTest < GeokitTestCase
     locations = Location.count(:origin => @loc_a, :formula => :flat, :conditions => "distance < 6.387")
     assert_equal 6, locations
   end
+
+  def test_find_with_distance_condition_with_simple_formula_override
+    locations = Location.find(:all, :origin => @loc_a, :formula => :simple, :conditions => "distance < 6.387")
+    assert_equal 6, locations.size
+    locations = Location.count(:origin => @loc_a, :formula => :simple, :conditions => "distance < 6.387")
+    assert_equal 6, locations
+  end
   
   def test_find_within
     locations = Location.find_within(3.97, :origin => @loc_a)
