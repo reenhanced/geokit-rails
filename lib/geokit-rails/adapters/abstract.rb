@@ -45,7 +45,7 @@ module Geokit
         rlat="RADIANS(#{qualified_lat_column_name})"
         rlng="RADIANS(#{qualified_lng_column_name})"
         %|
-          (ACOS(least(1,#{clat}*#{clng}*COS(#{rlat})*COS(#{rlng})+
+          (ACOS(#{least_function_name}(1,#{clat}*#{clng}*COS(#{rlat})*COS(#{rlng})+
           #{clat}*#{slng}*COS(#{rlat})*SIN(#{rlng})+
           #{slat}*SIN(#{rlat})))*#{multiplier})
          |
@@ -80,15 +80,21 @@ module Geokit
         lat_dist="#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name})"
         lng_dist="#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name})"
 
-        min_factor=0.945
-        max_factor=0.415
+        min_factor=0.415
+        max_factor=0.945
         #since we are not using POW, we need to use ABS to make positive
         lat_dist="ABS(#{lat_dist})"
         lng_dist="ABS(#{lng_dist})"
         #sqlite uses max for most and min for least
-        sql="(MIN(#{lat_dist},#{lng_dist})*#{min_factor}+MAX(#{lat_dist},#{lng_dist})*#{max_factor})"
+        sql="(#{least_function_name}(#{lat_dist},#{lng_dist})*#{min_factor}+#{most_function_name}(#{lat_dist},#{lng_dist})*#{max_factor})"
       end
       
+      def most_function_name
+        'greatest'
+      end
+      def least_function_name
+        'least'
+      end
       def decode_sphere_distance(origin, units)
         lat = deg2rad(origin.lat)
         lng = deg2rad(origin.lng)

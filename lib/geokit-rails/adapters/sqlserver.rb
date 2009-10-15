@@ -22,18 +22,9 @@ module Geokit
       def initialize(*args)
         super(*args)
       end
-
-      ## the only real difference is the use of geokit_least instead of least.
-      #
-      #  may want to port more of the abstract interface across
-      #  or abstract out the name of the least function into a method
-      def sphere_distance_sql(origin, units)
-        lat,lng,multiplier = decode_sphere_distance(origin,units)
-        %|
-          (ACOS([dbo].geokit_least(1,COS(#{lat})*COS(#{lng})*COS(RADIANS(#{qualified_lat_column_name}))*COS(RADIANS(#{qualified_lng_column_name}))+
-          COS(#{lat})*SIN(#{lng})*COS(RADIANS(#{qualified_lat_column_name}))*SIN(RADIANS(#{qualified_lng_column_name}))+
-          SIN(#{lat})*SIN(RADIANS(#{qualified_lat_column_name}))))*#{multiplier})
-         |
+      
+      def least_function_name
+        '[dbo].geokit_least'
       end
     end
   end
