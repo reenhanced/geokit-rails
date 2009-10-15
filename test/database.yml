@@ -1,12 +1,27 @@
-mysql:
-  adapter: mysql
-  host: localhost
-  username: root
-  password:
-  database: geokit_plugin_test
-postgresql:
-  adapter: postgresql
+baes: &base
   host: localhost
   username: root
   password: 
+
+mysql:
+  adapter: mysql
   database: geokit_plugin_test
+  <<: *base
+
+postgresql:
+  adapter: postgresql
+  database: geokit_plugin_test
+  <<: *base
+
+sqlserver:
+  adapter: sqlserver
+  mode: ODBC
+  dsn: geokit_tests
+  username: ruby
+
+sqlite3:
+  adapter: sqlite3
+  database: test.sqlite3
+  timeout: 5000
+  encoding: utf8
+  

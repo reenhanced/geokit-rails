@@ -20,7 +20,9 @@ module Geokit
   #
   # If raw SQL is desired, the distance_sql method can be used to obtain SQL appropriate
   # to use in a find_by_sql call.
-  module ActsAsMappable 
+  module ActsAsMappable
+    class UnsupportedAdapter < StandardError ; end
+    
     # Mix below class methods into ActiveRecord.
     def self.included(base) # :nodoc:
       base.extend ClassMethods
@@ -28,6 +30,7 @@ module Geokit
     
     # Class method to mix into active record.
     module ClassMethods # :nodoc:
+      
       # Class method to bring distance query support into ActiveRecord models.  By default
       # uses :miles for distance units and performs calculations based upon the Haversine
       # (sphere) formula.  These can be changed by setting Geokit::default_units and
@@ -127,7 +130,19 @@ module Geokit
 
     # Instance methods to mix into ActiveRecord.
     module SingletonMethods #:nodoc:
-
+      
+      # A proxy to an instance of a finder adapter, inferred from the connection's adapter.
+      def adapter
+        @adapter ||= begin
+          require File.join(File.dirname(__FILE__), 'adapters', connection.adapter_name.downcase)
+          klass = Adapters.const_get(connection.adapter_name.camelcase)
+          klass.load(self) unless klass.loaded
+          klass.new(self)
+        rescue LoadError
+          raise UnsupportedAdapter, "`#{connection.adapter_name.downcase}` is not a supported adapter."
+        end
+      end
+      
       # Extends the existing find method in potentially two ways:
       # - If a mappable instance exists in the options, adds a distance column.
       # - If a mappable instance exists in the options and the distance column exists in the
@@ -213,15 +228,7 @@ module Geokit
       # Returns the distance calculation to be used as a display column or a condition.  This
       # is provide for anyone wanting access to the raw SQL.
       def distance_sql(origin, units=default_units, formula=default_formula)
-        case formula
-        when :sphere
-          sql = sphere_distance_sql(origin, units)
-        when :flat
-          sql = flat_distance_sql(origin, units)
-        when :simple
-          sql = simple_flat_distance_sql(origin, units)
-        end
-        sql
+        adapter.distance_sql(origin,units,formula)
       end
 
       private
@@ -405,53 +412,6 @@ module Geokit
           condition = options[:conditions].is_a?(String) ? options[:conditions] : options[:conditions].first
           pattern = Regexp.new("\\b#{distance_column_name}\\b")
           condition.gsub!(pattern, distance_sql(origin, units, formula))
-        end
-
-        # Returns the distance SQL using the spherical world formula (Haversine).  The SQL is tuned
-        # to the database in use.
-        def sphere_distance_sql(origin, units=default_units)
-            lat = deg2rad(origin.lat)
-            lng = deg2rad(origin.lng)
-            clat=Math.cos(lat)
-            clng=Math.cos(lng)
-            slat=Math.sin(lat)
-            slng=Math.sin(lng)
-            multiplier = units_sphere_multiplier(units)
-            #would be nice to store these as columns in the database
-            rlat="RADIANS(#{qualified_lat_column_name})"
-            rlng="RADIANS(#{qualified_lng_column_name})"
-            sql=<<-SQL_END 
-                  (ACOS(least(1,#{clat}*#{clng}*COS(#{rlat})*COS(#{rlng})+
-                  #{clat}*#{slng}*COS(#{rlat})*SIN(#{rlng})+
-                  #{slat}*SIN(#{rlat})))*#{multiplier})
-                  SQL_END
-        end
-        
-        # Returns the distance SQL using the flat-world formula (Phythagorean Theory).  The SQL is tuned
-        # to the database in use.
-        def flat_distance_sql(origin, units=default_units)
-          lat_degree_units = units_per_latitude_degree(units) #69.1
-          lng_degree_units = units_per_longitude_degree(origin.lat, units) #69.1 and cos... aka 53.0
-          lat_dist="#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name})"
-          lng_dist="#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name})"
-
-          sql="SQRT(POW(#{lat_dist},2)+POW(#{lng_dist},2))"
-        end
-
-        # Returns the distance SQL using the flat-world formula (Phythagorean Theory).
-        # Further simplified to not use SQRT
-        def simple_flat_distance_sql(origin, units=default_units)
-          lat_degree_units = units_per_latitude_degree(units) #69.1
-          lng_degree_units = units_per_longitude_degree(origin.lat, units) #69.1 and cos... aka 53.0
-          lat_dist="#{lat_degree_units}*(#{origin.lat}-#{qualified_lat_column_name})"
-          lng_dist="#{lng_degree_units}*(#{origin.lng}-#{qualified_lng_column_name})"
-
-          factor=0.415#use 1-DELTA_FACTOR
-          delta_factor=0.53 #use 0.6 for simplicity
-          lat_dist="ABS(#{lat_dist})"
-          lng_dist="ABS(#{lng_dist})"
-          #sqlite uses max for most and min for least
-          sql="((#{lat_dist}+#{lng_dist})*#{factor}+MAX(#{lat_dist},#{lng_dist})*#{delta_factor})"
         end
     end
   end
