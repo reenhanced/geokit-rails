@@ -5,7 +5,8 @@
 # Note that we don't explicitly require the geokit gem. 
 # You should specify gem dependencies in your config/environment.rb: config.gem "geokit"
 #
-if defined? Geokit
+begin
+  require 'geokit'
   require 'geokit-rails/defaults'
   require 'geokit-rails/adapters/abstract'
   require 'geokit-rails/acts_as_mappable'
@@ -16,7 +17,7 @@ if defined? Geokit
   
   # Automatically mix in ip geocoding helpers into ActionController classes.
   ActionController::Base.send :include, GeoKit::IpGeocodeLookup
-else
+rescue LoadError
   message=%q(WARNING: geokit-rails requires the Geokit gem. You either don't have the gem installed,
 or you haven't told Rails to require it. If you're using a recent version of Rails: 
   config.gem "geokit" # in config/environment.rb
