@@ -489,6 +489,38 @@ If you need to sort things post-query, you can do so:
 Obviously, each of the items in the array must have a latitude/longitude so
 they can be sorted by distance.
 
+## How to re-geocode an address
+
+As of Rails 2.1, dirty attributes provide a way to see if a column has 
+"changed" in the database.  Using these, it is possible to use the default 
+
+      before_validation_on_create :geocode_address
+
+callback for geocoding on creation AND also re-geocode addresses when they 
+have been updated or changed.
+
+By adding an additional callback before save, we can check the Rail's 
+"changed" list of attributes to see if the address field has changed, and 
+if so, re-geocode:
+
+    class Store << ActiveRecord::Base
+      acts_as_mappable
+      before_validation_on_create :geocode_address
+      before_save :re_geocode_on_address_change
+    
+      private
+    
+      def re_geocode_on_address_change
+        geocode_address if self.changed.include?("address")
+      end
+    
+      def geocode_address
+        geo=Geokit::Geocoders::MultiGeocoder.geocode (address)
+        errors.add(:address, "Could not Geocode address") if !geo.success
+        self.lat, self.lng = geo.lat,geo.lng if geo.success
+      end
+    end
+
 ## Database indexes
 
 MySQL can't create indexes on a calculated field such as those Geokit uses to
