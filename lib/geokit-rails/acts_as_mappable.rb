@@ -262,6 +262,8 @@ module Geokit
             apply_include_for_through(options)
             # Unfortunatley, we need to do extra work if you use an :include. See the method for more info.
             handle_order_with_include(options,origin,units,formula) if options.include?(:include) && options.include?(:order) && origin
+          else
+            options.delete(:within)
           end
 
           # Restore options minus the extra options that we used for the
@@ -322,7 +324,7 @@ module Geokit
         # Replace :within, :beyond and :range distance tokens with the appropriate distance 
         # where clauses.  Removes these tokens from the options hash.
         def apply_distance_scope(options)
-          distance_condition = if options.has_key?(:within)
+          distance_condition = if options.has_key?(:within) && !options[:within].blank?
             "#{distance_column_name} <= #{options[:within]}"
           elsif options.has_key?(:beyond)
             "#{distance_column_name} > #{options[:beyond]}"
@@ -333,6 +335,8 @@ module Geokit
           if distance_condition
             [:within, :beyond, :range].each { |option| options.delete(option) }
             options[:conditions] = merge_conditions(options[:conditions], distance_condition)
+          else
+            options.delete(:within)
           end
         end
 
