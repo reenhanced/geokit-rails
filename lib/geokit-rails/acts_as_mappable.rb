@@ -228,13 +228,7 @@ module Geokit
       # Returns the distance calculation to be used as a display column or a condition.  This
       # is provide for anyone wanting access to the raw SQL.
       def distance_sql(origin, units=default_units, formula=default_formula)
-        case formula
-        when :sphere
-          sql = sphere_distance_sql(origin, units)
-        when :flat
-          sql = flat_distance_sql(origin, units)
-        end
-        sql
+        adapter.distance_sql(origin,units,formula)
       end
 
       private
@@ -243,6 +237,7 @@ module Geokit
         # conditionally adding to the select clause for finders.
         def prepare_for_find_or_count(action, args)
           options = args.extract_options!
+
           #options = defined?(args.extract_options!) ? args.extract_options! : extract_options_from_args!(args)
           # Obtain items affecting distance condition.
           origin = extract_origin_from_options(options)
@@ -267,6 +262,8 @@ module Geokit
             apply_include_for_through(options)
             # Unfortunatley, we need to do extra work if you use an :include. See the method for more info.
             handle_order_with_include(options,origin,units,formula) if options.include?(:include) && options.include?(:order) && origin
+          else
+            options.delete(:within)
           end
 
           # Restore options minus the extra options that we used for the
@@ -327,7 +324,7 @@ module Geokit
         # Replace :within, :beyond and :range distance tokens with the appropriate distance 
         # where clauses.  Removes these tokens from the options hash.
         def apply_distance_scope(options)
-          distance_condition = if options.has_key?(:within)
+          distance_condition = if options.has_key?(:within) && !options[:within].blank?
             "#{distance_column_name} <= #{options[:within]}"
           elsif options.has_key?(:beyond)
             "#{distance_column_name} > #{options[:beyond]}"
@@ -338,6 +335,8 @@ module Geokit
           if distance_condition
             [:within, :beyond, :range].each { |option| options.delete(option) }
             options[:conditions] = merge_conditions(options[:conditions], distance_condition)
+          else
+            options.delete(:within)
           end
         end
 
@@ -416,25 +415,6 @@ module Geokit
           condition = options[:conditions].is_a?(String) ? options[:conditions] : options[:conditions].first
           pattern = Regexp.new("\\b#{distance_column_name}\\b")
           condition.gsub!(pattern, distance_sql(origin, units, formula))
-        end
-
-        # Returns the distance SQL using the spherical world formula (Haversine).  The SQL is tuned
-        # to the database in use.
-        def sphere_distance_sql(origin, units)
-          lat = deg2rad(origin.lat)
-          lng = deg2rad(origin.lng)
-          multiplier = units_sphere_multiplier(units)
-
-          adapter.sphere_distance_sql(lat, lng, multiplier) if adapter
-        end
-        
-        # Returns the distance SQL using the flat-world formula (Phythagorean Theory).  The SQL is tuned
-        # to the database in use.
-        def flat_distance_sql(origin, units)
-          lat_degree_units = units_per_latitude_degree(units)
-          lng_degree_units = units_per_longitude_degree(origin.lat, units)
-          
-          adapter.flat_distance_sql(origin, lat_degree_units, lng_degree_units)
         end
     end
   end

@@ -18,7 +18,7 @@ class EnvTestTask < Rake::TestTask
   
 end
 
-%w(mysql postgresql sqlserver).each do |configuration|
+%w(mysql postgresql sqlserver sqlite3).each do |configuration|
   EnvTestTask.new("test_#{configuration}") do |t|
     t.pattern = 'test/**/*_test.rb'
     t.verbose = true
@@ -28,4 +28,4 @@ end
 end
 
 desc 'Test available databases.'
-task :test_databases => %w(test_mysql test_postgresql test_sqlserver)
+task :test_databases => %w(test_mysql test_postgresql test_sqlserver test_sqlite3)

@@ -74,6 +74,12 @@ class ActsAsMappableTest < GeokitTestCase
     assert_in_delta 3.97, @loc_a.distance_to(locations.last, :units => :miles, :formula => :sphere), 0.01
   end
   
+  def test_regular_find_still_works
+    assert_nothing_thrown do
+      Location.first.reload
+    end
+  end
+
   def test_find_with_distance_condition
     locations = Location.find(:all, :origin => @loc_a, :conditions => "distance < 3.97")
     assert_equal 5, locations.size
@@ -92,6 +98,13 @@ class ActsAsMappableTest < GeokitTestCase
     locations = Location.find(:all, :origin => @loc_a, :formula => :flat, :conditions => "distance < 6.387")
     assert_equal 6, locations.size
     locations = Location.count(:origin => @loc_a, :formula => :flat, :conditions => "distance < 6.387")
+    assert_equal 6, locations
+  end
+
+  def test_find_with_distance_condition_with_simple_formula_override
+    locations = Location.find(:all, :origin => @loc_a, :formula => :simple, :conditions => "distance < 6.387")
+    assert_equal 6, locations.size
+    locations = Location.count(:origin => @loc_a, :formula => :simple, :conditions => "distance < 6.387")
     assert_equal 6, locations
   end
   

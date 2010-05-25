@@ -18,3 +18,10 @@ sqlserver:
   mode: ODBC
   dsn: geokit_tests
   username: ruby
+
+sqlite3:
+  adapter: sqlite3
+  database: test.sqlite3
+  timeout: 5000
+  encoding: utf8
+  
