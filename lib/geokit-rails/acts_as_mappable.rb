@@ -402,7 +402,7 @@ module Geokit
         def add_distance_to_select(options, origin, units=default_units, formula=default_formula)
           if origin
             distance_selector = distance_sql(origin, units, formula) + " AS #{distance_column_name}"
-            selector = options.has_key?(:select) && options[:select] ? options[:select] : "*"
+            selector = options.has_key?(:select) && options[:select] ? options[:select] : "#{quoted_table_name}.*"
             options[:select] = "#{selector}, #{distance_selector}"  
           end
         end

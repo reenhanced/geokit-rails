@@ -122,6 +122,16 @@ class ActsAsMappableTest < GeokitTestCase
     assert_equal 5, locations
   end
   
+  def test_has_many_through_all_within
+    investor = Investor.find_by_name('Rich Dude')
+    assert_not_nil investor
+
+    locations = investor.locations.all(:within => 3.97, :origin => @loc_a)
+    assert_equal 4, locations.map(&:id).uniq.size
+    locations = investor.locations.count(:within => 3.97, :origin => @loc_a)
+    assert_equal 4, locations
+  end
+  
   def test_find_within_with_coordinates
     locations = Location.find_within(3.97, :origin =>[@loc_a.lat,@loc_a.lng])
     assert_equal 5, locations.size    
