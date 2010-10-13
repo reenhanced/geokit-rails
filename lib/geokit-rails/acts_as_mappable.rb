@@ -240,10 +240,10 @@ module Geokit
 
           #options = defined?(args.extract_options!) ? args.extract_options! : extract_options_from_args!(args)
           # Obtain items affecting distance condition.
-          origin = extract_origin_from_options(options)
-          units = extract_units_from_options(options)
+          origin  = extract_origin_from_options(options)
+          units   = extract_units_from_options(options)
           formula = extract_formula_from_options(options)
-          bounds = extract_bounds_from_options(options)
+          bounds  = extract_bounds_from_options(options)
 
           # Only proceed if this is a geokit-related query
           if origin || bounds
