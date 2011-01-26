@@ -74,6 +74,15 @@ class ActsAsMappableTest < GeokitTestCase
     assert_in_delta 3.97, @loc_a.distance_to(locations.last, :units => :miles, :formula => :sphere), 0.01
   end
   
+  def test_distance_column_in_select_with_include
+    locations = Location.find(:all, :origin => @loc_a, :include => :company, :conditions => "companies.name IS NOT NULL", 
+                                    :order => "IF(ISNULL(distance),1,0), distance ASC")
+
+    assert_equal 6, locations.size
+    assert_equal 0, @loc_a.distance_to(locations.first)
+    assert_in_delta 3.97, @loc_a.distance_to(locations.last, :units => :miles, :formula => :sphere), 0.01
+  end
+  
   def test_regular_find_still_works
     assert_nothing_thrown do
       Location.first.reload

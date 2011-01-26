@@ -290,7 +290,7 @@ module Geokit
         # So, the 'distance' column isn't available for the :order clause to reference when we use :include.
         def handle_order_with_include(options, origin, units, formula)
           # replace the distance_column_name with the distance sql in order clause
-          options[:order].sub!(distance_column_name, distance_sql(origin, units, formula))
+          options[:order].gsub!(distance_column_name, distance_sql(origin, units, formula))
         end
 
         # Looks for mapping-specific tokens and makes appropriate translations so that the 
