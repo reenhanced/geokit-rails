@@ -1,11 +1,11 @@
 ## INSTALLATION
   
-Geokit consists of a Gem ([geokit-gem](http://github.com/andre/geokit-gem/tree/master)) and a Rails plugin ([geokit-rails](http://github.com/andre/geokit-rails/tree/master)).
+Geokit consists of a Gem ([geokit-gem](http://github.com/andre/geokit-gem/tree/master)) and a Rails plugin ([geokit-rails](http://github.com/reenhanced/geokit-rails/tree/master)).
 
 #### 1. Install the Rails plugin:
 
     cd [YOUR_RAILS_APP_ROOT]
-    script/plugin install git://github.com/andre/geokit-rails.git
+    script/plugin install git://github.com/reenhanced/geokit-rails.git
     
 #### 2. Add this line to your environment.rb 
 (inside the Rails::Initializer.run do |config| block)
